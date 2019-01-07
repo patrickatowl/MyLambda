@@ -1,6 +1,5 @@
 import json
 import datetime
-import pytz
 
 
 def handler(event, context):
