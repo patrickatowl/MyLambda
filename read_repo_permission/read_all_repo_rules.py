@@ -3,6 +3,8 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
+repo_file="./repo_list.txt"
+"""
 repos = [
     'market-kit-android','market_admin','market_agent_search','market_api_doc',
     'market_edm_emails_update','market_fb_bot','market_google_tool','market_motherday_activity',
@@ -11,6 +13,8 @@ repos = [
     'owlting_market_content_ai','owlting_market_flutter_app','owlting_market_frontend',
     'owlting_market_recs','prediction_market'
 ]
+"""
+
 
 def load_repo_filter(filepath):
     """Load repo names from a text file, one per line"""
@@ -21,8 +25,8 @@ def load_repo_filter(filepath):
         print(f"Warning: repo filter file '{filepath}' not found, loading all repos.", file=sys.stderr)
         return []
     
-REPO_FILTER = load_repo_filter(repo_file)
-    
+repos = load_repo_filter(repo_file)
+
 results = []
 
 # --- Step 1: 收集所有 Repo 的 API 資料 ---
@@ -108,6 +112,6 @@ for col in ws.columns:
     ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 40)
 
 # 儲存檔案（整支程式只儲存這一次）
-save_path = r'C:/Users/czber/repo/MyLambda/git_read_repos_jobs/market_branch_protection.xlsx'
+save_path = r'branch_protection.xlsx'
 wb.save(save_path)
 print(f'\nAll done! Saved to {save_path}')

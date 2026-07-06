@@ -8,6 +8,8 @@ from collections import defaultdict
 
 GITHUB_TOKEN = None  # Set via command line or environment
 ORG_NAME = "OwlTing"
+repo_file="./repo_list.txt"
+
 
 def github_api(endpoint, params=None):
     """Make GitHub API request with pagination support"""
@@ -33,6 +35,8 @@ def load_repo_list(filepath):
         repos = [line.strip() for line in f if line.strip() and not line.startswith('#')]
     print(f"Loaded {len(repos)} repos from {filepath}", file=sys.stderr)
     return repos
+
+
 
 def get_org_repos():
     """Get all repositories in the organization via API"""
@@ -152,8 +156,34 @@ def get_user_permissions(repos=None):
     
     return permissions, repos, members
 
+
+def get_unique_filename(filepath):
+    """如果檔案存在，自動在檔名後加上 _1, _2 等序號"""
+    if not os.path.exists(filepath):
+        return filepath
+    
+    # 拆分路徑、檔名與副檔名 (例如: 'output/permissions.csv' -> 'output/permissions', '.csv')
+    base, ext = os.path.splitext(filepath)
+    counter = 1
+    
+    # 循環檢查，直到找到不存在的檔名
+    while os.path.exists(f"{base}_{counter}{ext}"):
+        counter += 1
+        
+    return f"{base}_{counter}{ext}"
+
+
 def write_csv(permissions, repos, members, output_file='permissions.csv'):
     """Write permissions matrix to CSV"""
+    # ➡️ 1. 指定輸出的資料夾名稱
+    target_dir = 'output'    
+    # ➡️ 2. 如果資料夾不存在，就自動建立它 (exist_ok=True 代表如果已存在也不會報錯)
+    os.makedirs(target_dir, exist_ok=True)    
+    # ➡️ 3. 取得原本的檔名（例如從 'path/to/permissions.csv' 取出 'permissions.csv'）
+    filename = os.path.basename(output_file)    
+    # ➡️ 4. 組合新的路徑成 'output/permissions.csv'
+    new_filepath = os.path.join(target_dir, filename)
+    output_file = get_unique_filename(new_filepath)
     with open(output_file, 'w', newline='') as f:
         writer = csv.writer(f)
         
