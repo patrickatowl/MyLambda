@@ -82,7 +82,6 @@ def build_client(wsdl_path: str, login: str, password: str, label: str = "") -> 
     transport = Transport(session=session)
     client = Client(wsdl=wsdl_path, transport=transport)
     print_client_endpoint(client, label)
-    print_client_operations(client, label)
     return client
 
 
@@ -99,22 +98,6 @@ def print_client_endpoint(client: Client, label: str):
                 print(f"[{label}] SOAP endpoint = {address}")
     except Exception:
         pass
-
-
-def print_client_operations(client: Client, label: str):
-    """
-    印出這份 WSDL 實際綁定的所有操作(operation)名稱。
-    "Manage Service Product Valuations" 照命名慣例通常只有 MaintainBundle 這種寫入操作，
-    但有些 SAP WSDL 會把 Create/Update/Query 包在同一個服務裡，
-    與其用猜的操作名稱硬呼叫，不如先印出來確認有沒有可以查詢估價成本的操作可用。
-    """
-    try:
-        for service in client.wsdl.services.values():
-            for port in service.ports.values():
-                operations = sorted(port.binding._operations.keys())
-                print(f"[{label}] 可用操作 = {operations}")
-    except Exception as exc:
-        print(f"[{label}] 無法列出操作：{exc}")
 
 
 # ---------------------------------------------------------------------------
