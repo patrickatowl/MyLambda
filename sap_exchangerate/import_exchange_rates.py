@@ -72,16 +72,16 @@ def import_exchange_rates_to_sap(
     """
     依據 WSDL Signature 組裝 SOAP Request 並發送至 SAP ByDesign
     
-    WSDL Signature:
-    - actionCode: '04' (SAVE)
-    - TypeCode: 匯率類型 (例如 'Z01' 或 '001')
-    - SourceCurrencyCode: 來源幣別 (例如 'USD')
-    - TargetCurrencyCode: 目標幣別 (例如 'TWD')
-    - MidRate: 匯率金額
-    - ValidFromDateTime: ISO UTC 時間格式 (例如 '2026-05-29T00:00:00Z')
+    時區處理：
+    台灣當地時間 00:00:00 (UTC+8) 轉換為 UTC 時需減去 8 小時，
+    例如 2026-05-29 00:00:00 (TPE) -> 2026-05-28T16:00:00Z (UTC)。
     """
     effective_date = effective_date or datetime.date.today().strftime("%Y-%m-%d")
-    valid_from_datetime = f"{effective_date}T00:00:00Z"
+    
+    # 解析日期並扣除 8 小時以轉為真正的 UTC 00:00 (UTC+8)
+    dt_local = datetime.datetime.strptime(effective_date, "%Y-%m-%d")
+    dt_utc = dt_local - datetime.timedelta(hours=8)
+    valid_from_datetime = dt_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # 建立批次 ExchangeRate 節點
     exchange_rate_items = []
@@ -102,7 +102,6 @@ def import_exchange_rates_to_sap(
     }
 
     return client.service.MaintainBundle(**request)
-
 
 def main():
     parser = argparse.ArgumentParser(description="讀取台銀匯率 CSV 並批次寫入 SAP ByDesign")
