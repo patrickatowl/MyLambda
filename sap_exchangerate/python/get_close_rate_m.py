@@ -1,58 +1,68 @@
-import cloudscraper
-from bs4 import BeautifulSoup
+import os
+import time
 from datetime import datetime, timedelta
-from urllib.parse import urljoin
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-def download_bot_rates_csv():
-    # 1. 動態計算前一個月的年月 (格式：YYYY-MM)
+def download_csv_with_selenium():
+    # 1. 取得前一個月的年月
     today = datetime.now()
     first_day_this_month = today.replace(day=1)
     last_month_date = first_day_this_month - timedelta(days=1)
     target_year_month = last_month_date.strftime("%Y-%m")
     
-    base_url = "https://rate.bot.com.tw"
-    query_url = f"{base_url}/cr/{target_year_month}"
+    query_url = f"https://rate.bot.com.tw/cr/{target_year_month}"
     
-    print(f"正在查詢 {target_year_month} 的匯率資料...")
-    print(f"目標網址: {query_url}")
+    # 2. 設定 Selenium 瀏覽器選項
+    # 取得當前執行路徑，將下載資料夾設定在此
+    current_dir = os.getcwd()
     
-    # 2. 建立 cloudscraper 實例 (它會自動處理常見的防護機制)
-    scraper = cloudscraper.create_scraper(browser={
-        'browser': 'chrome',
-        'platform': 'windows',
-        'desktop': True
-    })
+    chrome_options = Options()
+    # 啟動無頭模式 (不顯示實體瀏覽器視窗，如果測試時想看畫面可以把這行註解掉)
+    chrome_options.add_argument("--headless") 
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+    
+    # 修改預設下載路徑，並禁止跳出下載確認視窗
+    prefs = {
+        "download.default_directory": current_dir,
+        "download.prompt_for_download": False,
+        "safebrowsing.enabled": True
+    }
+    chrome_options.add_experimental_option("prefs", prefs)
+    
+    print("啟動 Selenium 瀏覽器...")
+    driver = webdriver.Chrome(options=chrome_options)
     
     try:
-        # 3. 使用 scraper 發送請求，取代原來的 requests
-        response = scraper.get(query_url)
-        response.raise_for_status()
+        print(f"正在前往: {query_url}")
+        driver.get(query_url)
         
-        soup = BeautifulSoup(response.text, "html.parser")
+        # 3. 等待網頁載入，直到尋找到下載按鈕 (最多等 15 秒)
+        # 尋找文字包含 "CSV" 的連結
+        wait = WebDriverWait(driver, 15)
+        csv_button = wait.until(
+            EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "CSV"))
+        )
         
-        # 尋找包含 CSV 的下載連結
-        csv_link_tag = soup.find("a", string=lambda text: text and "CSV" in text)
+        print("找到 CSV 按鈕，執行點擊...")
+        # 為了避免被畫面上的其他元素擋住，使用 JavaScript 執行點擊
+        driver.execute_script("arguments[0].click();", csv_button)
         
-        if not csv_link_tag or not csv_link_tag.get("href"):
-            csv_url = f"{base_url}/cr/csv/{target_year_month}"
-            print(f"網頁中未直接找到按鈕，嘗試預設下載路徑: {csv_url}")
-        else:
-            csv_url = urljoin(base_url, csv_link_tag["href"])
-            print(f"找到 CSV 下載連結: {csv_url}")
-            
-        # 4. 下載 CSV 檔案
-        csv_response = scraper.get(csv_url)
-        csv_response.raise_for_status()
-        
-        # 儲存檔案
-        filename = f"bot_closing_rates_{target_year_month}.csv"
-        with open(filename, "wb") as f:
-            f.write(csv_response.content)
-            
-        print(f"✅ 下載成功！檔案已儲存為: {filename}")
+        # 4. 等待檔案下載完成 (給予 5 秒鐘的緩衝時間)
+        print("等待檔案下載完成...")
+        time.sleep(5)
+        print(f"✅ 理論上下載已完成！請檢查目前資料夾 ({current_dir}) 中是否有新下載的 CSV 檔案。")
         
     except Exception as e:
-        print(f"❌ 發生錯誤: {e}")
+        print(f"❌ 發生錯誤或找不到按鈕: {e}")
+        
+    finally:
+        # 關閉瀏覽器，釋放資源
+        driver.quit()
 
 if __name__ == "__main__":
-    download_bot_rates_csv()
+    download_csv_with_selenium()
