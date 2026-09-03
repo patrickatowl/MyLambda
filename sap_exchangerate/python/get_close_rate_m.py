@@ -22,10 +22,13 @@ def download_csv_with_selenium():
     
     chrome_options = Options()
     # 啟動無頭模式 (不顯示實體瀏覽器視窗，如果測試時想看畫面可以把這行註解掉)
-    chrome_options.add_argument("--headless") 
+    # chrome_options.add_argument("--headless") 
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options = Options()
     
+    
+
     # 修改預設下載路徑，並禁止跳出下載確認視窗
     prefs = {
         "download.default_directory": current_dir,
@@ -41,11 +44,10 @@ def download_csv_with_selenium():
         print(f"正在前往: {query_url}")
         driver.get(query_url)
         
-        # 3. 等待網頁載入，直到尋找到下載按鈕 (最多等 15 秒)
-        # 尋找文字包含 "CSV" 的連結
+        # 2. ⚠️ 改變定位策略：不抓文字，改抓網址中包含 'csv' 的按鈕
         wait = WebDriverWait(driver, 15)
         csv_button = wait.until(
-            EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "CSV"))
+            EC.presence_of_element_located((By.XPATH, "//a[contains(@href, 'csv')]"))
         )
         
         print("找到 CSV 按鈕，執行點擊...")
